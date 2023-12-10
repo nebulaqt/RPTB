@@ -4,7 +4,7 @@ namespace RPTB.Utilities;
 
 public static class ProcessManager
 {
-    private static Process? _caddyProcess;
+    private const string UniqueTitle = "RPTB - Caddy";
 
     private static string GetExePath()
     {
@@ -13,12 +13,18 @@ public static class ProcessManager
 
     public static void StartCaddyProcess()
     {
-        _caddyProcess = Process.Start(GetProcessStartInfo());
+        Process.Start(GetProcessStartInfo());
     }
 
     public static void StopCaddyProcess()
     {
-        _caddyProcess?.CloseMainWindow();
+        var localAll = Process.GetProcesses();
+        foreach (var p in localAll)
+        {
+            if (string.IsNullOrEmpty(p.MainWindowTitle) || !p.MainWindowTitle.Contains(UniqueTitle)) continue;
+            p.Kill();
+            p.WaitForExit();
+        }
     }
 
     public static void RestartCaddyProcess()
@@ -29,12 +35,10 @@ public static class ProcessManager
 
     private static ProcessStartInfo GetProcessStartInfo()
     {
-        return new ProcessStartInfo(GetExePath())
+        return new ProcessStartInfo("cmd.exe")
         {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            Arguments = "run --config ./Caddyfile --adapter caddyfile"
+            UseShellExecute = true,
+            Arguments = $"/K title {UniqueTitle} && {GetExePath()} run"
         };
     }
 }

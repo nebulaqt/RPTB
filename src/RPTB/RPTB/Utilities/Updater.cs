@@ -26,17 +26,27 @@ internal static class Updater
             var totalBytes = response.Content.Headers.ContentLength.Value;
 
             int bytesRead;
-            do
+            try
             {
-                bytesRead = await contentStream.ReadAsync(buffer);
-                if (bytesRead == 0) continue;
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                totalBytesRead += bytesRead;
-                DrawProgressBar(totalBytesRead, totalBytes);
-            } while (bytesRead != 0);
+                do
+                {
+                    bytesRead = await contentStream.ReadAsync(buffer);
+                    if (bytesRead == 0) continue;
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    totalBytesRead += bytesRead;
+                    DrawProgressBar(totalBytesRead, totalBytes);
+                } while (bytesRead != 0);
+            }
+            finally
+
+            {
+                // this should clean up the file stream and free up the file.
+                fileStream.Close();
+            }
         }
 
         try
+
         {
             using var zipArchive = ZipFile.OpenRead(downloadedZipPath);
             var caddyEntry = zipArchive.GetEntry("caddy.exe");
