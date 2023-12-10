@@ -13,6 +13,7 @@ var menuOptions = new List<string>
     "Stop",
     "Restart",
     "Update Caddy",
+    "Check Domain",
     "Exit"
 };
 
@@ -26,6 +27,7 @@ do
     DisplayMenuOptions(menuOptions);
 
     var userInput = Console.ReadLine();
+
     switch (userInput)
     {
         case "1":
@@ -71,6 +73,16 @@ do
             await Updater.DownloadCaddyPortableAsync();
             break;
         case "11":
+            Console.WriteLine("Checking Domain...");
+            Console.WriteLine("Enter domain: ");
+            Task.Run(async () =>
+            {
+                var domain = Console.ReadLine();
+                if (domain != null) await CheckDomain.CheckWebsiteStatus(domain);
+            }).GetAwaiter().GetResult();
+            Console.ReadKey();
+            break;
+        case "12":
             Console.WriteLine("Exiting...");
             Environment.Exit(0);
             return;
@@ -104,6 +116,7 @@ void DisplayAsciiArt()
     var logoLines = logo.Split('\n');
     var consoleWidth = Console.WindowWidth;
 
-    foreach (var line in logoLines) Console.WriteLine(
-        new StringBuilder().Append("{0,").Append(consoleWidth / 2 + line.Length / 2).Append('}').ToString(), line);
+    foreach (var line in logoLines)
+        Console.WriteLine(
+            new StringBuilder().Append("{0,").Append(consoleWidth / 2 + line.Length / 2).Append('}').ToString(), line);
 }
