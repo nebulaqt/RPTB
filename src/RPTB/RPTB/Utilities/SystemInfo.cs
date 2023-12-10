@@ -9,10 +9,12 @@ public static class SystemInfo
         var versionString = Environment.OSVersion.ToString();
         var description = RuntimeInformation.OSDescription;
         var architecture = RuntimeInformation.OSArchitecture.ToString();
-        var systemInfoDescription = $"OS Version: {versionString}, Description: {description}, Architecture: {architecture}";
+        var systemInfoDescription =
+            $"OS Version: {versionString}, Description: {description}, Architecture: {architecture}";
 
         return systemInfoDescription;
     }
+
     public static string GetRuntimeInfo()
     {
         var frameworkDescription = RuntimeInformation.FrameworkDescription;

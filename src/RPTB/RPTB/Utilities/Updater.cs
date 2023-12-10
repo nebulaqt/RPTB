@@ -8,13 +8,15 @@ internal static class Updater
     {
         Console.Clear();
         Console.WriteLine("Updating Caddy...");
-        const string caddyDownloadUrl = "https://github.com/caddyserver/caddy/releases/latest/download/caddy_2.7.6_windows_amd64.zip";
+        const string caddyDownloadUrl =
+            "https://github.com/caddyserver/caddy/releases/latest/download/caddy_2.7.6_windows_amd64.zip";
         const string downloadedZipPath = "caddy.zip";
         using var client = new HttpClient();
         var response = await client.GetAsync(new Uri(caddyDownloadUrl));
         await using var contentStream = await response.Content.ReadAsStreamAsync();
-        await using var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        
+        await using var fileStream =
+            new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+
         const int bufferSize = 8192;
         var buffer = new byte[bufferSize];
         long totalBytesRead = 0;
@@ -22,7 +24,7 @@ internal static class Updater
         if (response.Content.Headers.ContentLength != null)
         {
             var totalBytes = response.Content.Headers.ContentLength.Value;
-            
+
             int bytesRead;
             do
             {

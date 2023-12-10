@@ -41,7 +41,7 @@ var actions = new Dictionary<string, Action>
     { "8", ProcessManager.StopCaddyProcess },
     { "9", ProcessManager.RestartCaddyProcess },
     { "10", () => { Updater.DownloadCaddyPortableAsync().Wait(); } },
-    { "11", () => AskUserForDomain() },
+    { "11", AskUserForDomain },
     {
         "12", () =>
         {

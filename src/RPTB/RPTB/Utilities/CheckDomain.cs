@@ -12,7 +12,7 @@ public static class CheckDomain
         using var client = new HttpClient();
         try
         {
-            var response = await client.GetAsync(url);        
+            var response = await client.GetAsync(url);
             await DisplayDomainStatus(response, domain);
         }
         catch (Exception ex)
@@ -34,6 +34,7 @@ public static class CheckDomain
             Console.WriteLine("Request failed with status code: NotFound");
             return; // return early as site was not available
         }
+
         Console.WriteLine($"Status for {domain} is {domainStatus}");
     }
 }
