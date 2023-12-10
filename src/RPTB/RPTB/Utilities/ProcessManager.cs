@@ -13,14 +13,7 @@ public static class ProcessManager
 
     public static void StartCaddyProcess()
     {
-        var startInfo = new ProcessStartInfo(GetExePath())
-        {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        _caddyProcess = Process.Start(startInfo);
+        _caddyProcess = Process.Start(GetProcessStartInfo());
     }
 
     public static void StopCaddyProcess()
@@ -31,7 +24,17 @@ public static class ProcessManager
     public static void RestartCaddyProcess()
     {
         StopCaddyProcess();
-
         StartCaddyProcess();
+    }
+
+    private static ProcessStartInfo GetProcessStartInfo()
+    {
+        return new ProcessStartInfo(GetExePath())
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            Arguments = "run --config ./Caddyfile --adapter caddyfile"
+        };
     }
 }
