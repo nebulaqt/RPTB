@@ -1,4 +1,5 @@
-﻿using RPTB.Utilities;
+﻿using System.Text;
+using RPTB.Utilities;
 
 var menuOptions = new List<string>
 {
@@ -18,7 +19,10 @@ var menuOptions = new List<string>
 do
 {
     Console.Clear();
-    DisplayAsciiArt("RPTB");
+    DisplayAsciiArt();
+    Console.WriteLine(SystemInfo.GetOperatingSystemInfo());
+    Console.WriteLine(SystemInfo.GetRuntimeInfo());
+    Console.WriteLine();
     DisplayMenuOptions(menuOptions);
 
     var userInput = Console.ReadLine();
@@ -52,12 +56,15 @@ do
             break;
         case "7":
             Console.WriteLine("Starting...");
+            ProcessManager.StartCaddyProcess();
             break;
         case "8":
             Console.WriteLine("Stopping...");
+            ProcessManager.StopCaddyProcess();
             break;
         case "9":
             Console.WriteLine("Restarting...");
+            ProcessManager.RestartCaddyProcess();
             break;
         case "10":
             Console.WriteLine("Downloading Caddy...");
@@ -76,14 +83,14 @@ do
 } while (true);
 
 
-void DisplayMenuOptions(List<string> options)
+void DisplayMenuOptions(IReadOnlyList<string> options)
 {
     for (var i = 0; i < options.Count; i++) Console.WriteLine($"{i + 1}. {options[i]}");
 
     Console.Write("Enter Option: ");
 }
 
-void DisplayAsciiArt(string text)
+void DisplayAsciiArt()
 {
     const string logo = """
                         _________________________________________
@@ -97,5 +104,6 @@ void DisplayAsciiArt(string text)
     var logoLines = logo.Split('\n');
     var consoleWidth = Console.WindowWidth;
 
-    foreach (var line in logoLines) Console.WriteLine("{0," + (consoleWidth / 2 + line.Length / 2) + "}", line);
+    foreach (var line in logoLines) Console.WriteLine(
+        new StringBuilder().Append("{0,").Append(consoleWidth / 2 + line.Length / 2).Append('}').ToString(), line);
 }

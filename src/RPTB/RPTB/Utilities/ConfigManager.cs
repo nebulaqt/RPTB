@@ -7,6 +7,9 @@ public static class ConfigManager
 {
     private const string FilePath = "./caddyfile";
 
+    /// <summary>
+    ///     Creates a configuration file for Caddy.
+    /// </summary>
     public static void CreateConfig()
     {
         try
@@ -51,7 +54,6 @@ public static class ConfigManager
     private static string GetCaddyFileContent()
     {
         var caddyFileContent = new StringBuilder();
-
         do
         {
             Console.Write("Enter subdomain (e.g., sub.domain.tld): ");
@@ -125,7 +127,6 @@ public static class ConfigManager
             foreach (Match match in matches)
             {
                 // Extract the entire entry, the subdomain and the IP address
-                var entry = match.Groups["entry"].Value;
                 var subdomain = match.Groups["subdomain"].Value;
                 var ip = match.Groups["ip"].Value;
 

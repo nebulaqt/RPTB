@@ -17,7 +17,8 @@ internal static class Updater
         var response = await client.GetAsync(new Uri(caddyDownloadUrl));
         await using var contentStream = await response.Content.ReadAsStreamAsync();
 
-        await using (var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None))
+        await using (var fileStream =
+                     new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
             var totalRead = 0L;
             var buffer = new byte[8192];
