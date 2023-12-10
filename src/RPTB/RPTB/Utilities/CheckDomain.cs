@@ -4,7 +4,7 @@ namespace RPTB.Utilities;
 
 public static class CheckDomain
 {
-    private const string BaseUrl = "http://localhost:5000/domainstatus/";
+    private const string BaseUrl = "https://rptb-api.nobyl.net/domainstatus/";
 
     public static async Task CheckAndDisplayWebsiteStatus(string domain)
     {
