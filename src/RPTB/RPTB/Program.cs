@@ -65,8 +65,6 @@ do
         value.Invoke();
     else
         Console.WriteLine("Invalid choice. Please enter a valid option.");
-
-    Thread.Sleep(1000);
 } while (true);
 
 void AskUserForDomain()
@@ -74,7 +72,7 @@ void AskUserForDomain()
     Console.WriteLine("Checking Domain...");
     Console.WriteLine("Enter domain: ");
     var domain = Console.ReadLine();
-    if (domain != null) CheckDomain.CheckAndDisplayWebsiteStatus(domain).Wait();
+    if (domain != null) CheckDomain.EvaluateDomainStatusAsync(domain).Wait();
     Console.ReadKey();
 }
 

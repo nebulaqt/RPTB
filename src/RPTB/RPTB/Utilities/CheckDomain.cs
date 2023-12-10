@@ -1,40 +1,50 @@
-using System.Net;
-
 namespace RPTB.Utilities;
 
 public static class CheckDomain
 {
-    private const string BaseUrl = "https://rptb-api.nobyl.net/domainstatus/";
+    private const string BaseUrl = "http://127.0.0.1:5000/domainstatus/{0}";
+    private const string ErrorMessage = "Error occurred: {0}";
+    private const string StatusMessage = "Status for {0} is {1}";
+    private static readonly HttpClient HttpClient = new();
 
-    public static async Task CheckAndDisplayWebsiteStatus(string domain)
+    public static async Task EvaluateDomainStatusAsync(string domain)
     {
-        var url = BaseUrl + domain;
-        using var client = new HttpClient();
         try
         {
-            var response = await client.GetAsync(url);
-            await DisplayDomainStatus(response, domain);
+            var requestUrl = BuildRequestUrl(domain);
+
+            var response = await HttpClient.GetAsync(requestUrl);
+            var domainStatus = await GetDomainStatusAsync(response);
+
+            PrintStatus(domain, domainStatus);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error occurred: {ex.Message}");
+            PrintError(ex);
         }
     }
 
-    private static async Task DisplayDomainStatus(HttpResponseMessage response, string domain)
+    private static string BuildRequestUrl(string domain)
     {
-        var domainStatus = "Offline"; // Default State
-        if (response.IsSuccessStatusCode)
-        {
-            var responseBody = await response.Content.ReadAsStringAsync();
-            if (responseBody is "Online" or "Offline") domainStatus = responseBody;
-        }
-        else if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            Console.WriteLine("Request failed with status code: NotFound");
-            return; // return early as site was not available
-        }
+        return BaseUrl.Replace("{0}", domain);
+    }
 
-        Console.WriteLine($"Status for {domain} is {domainStatus}");
+    private static async Task<string?> GetDomainStatusAsync(HttpResponseMessage response)
+    {
+        if (!response.IsSuccessStatusCode) return null;
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        return responseBody is "Online" or "Offline" ? responseBody : "Offline";
+    }
+
+    private static void PrintStatus(string domain, string? domainStatus)
+    {
+        Console.WriteLine(StatusMessage, domain, domainStatus);
+    }
+
+    private static void PrintError(Exception ex)
+    {
+        Console.WriteLine(ErrorMessage, ex.Message);
     }
 }
