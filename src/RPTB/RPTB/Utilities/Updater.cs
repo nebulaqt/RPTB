@@ -1,116 +1,116 @@
-﻿using System.Runtime.InteropServices;
-using SharpCompress.Archives;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 
-namespace RPTB.Utilities;
-
-internal static class Updater
+namespace RPTB.Utilities
 {
-    public static async Task DownloadCaddyPortableAsync()
+    internal static class Updater
     {
-        Console.Clear();
-        Console.WriteLine("Updating Caddy...");
-
-        string caddyDownloadUrl;
-        string downloadedZipPath;
-        string caddyExecutablePath;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        public static async Task DownloadCaddyPortableAsync(string? selectedOperatingSystem)
         {
-            caddyDownloadUrl =
-                "https://github.com/caddyserver/caddy/releases/latest/download/caddy_2.7.6_windows_amd64.zip";
-            downloadedZipPath = "caddy.zip";
-            caddyExecutablePath = "./caddy.exe";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            caddyDownloadUrl =
-                "https://github.com/caddyserver/caddy/releases/latest/download/caddy_2.7.6_linux_amd64.tar.gz";
-            downloadedZipPath = "caddy.tar.gz";
-            caddyExecutablePath = "./caddy";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            caddyDownloadUrl =
-                "https://github.com/caddyserver/caddy/releases/latest/download/caddy_2.7.6_mac_amd64.tar.gz";
-            downloadedZipPath = "caddy.tar.gz";
-            caddyExecutablePath = "./caddy";
-        }
-        else
-        {
-            Console.WriteLine("Unsupported operating system.");
-            return;
-        }
+            Console.Clear();
+            Console.WriteLine("Updating Caddy...");
 
-        using var client = new HttpClient();
+            string caddyDownloadUrl;
+            string downloadedFilePath;
 
-        try
-        {
-            using var response = await client.GetAsync(new Uri(caddyDownloadUrl));
-            response.EnsureSuccessStatusCode();
-
-            await using var contentStream = await response.Content.ReadAsStreamAsync();
-
-            await using var fileStream =
-                new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            const int bufferSize = 8192;
-            var buffer = new byte[bufferSize];
-            long totalBytesRead = 0;
-
-            var totalBytes = response.Content.Headers.ContentLength ?? 0;
-
-            int bytesRead;
-            do
+            switch (selectedOperatingSystem)
             {
-                bytesRead = await contentStream.ReadAsync(buffer);
-                if (bytesRead == 0) continue;
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                totalBytesRead += bytesRead;
-                DrawProgressBar(totalBytesRead, totalBytes);
-            } while (bytesRead != 0);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error occurred during download: {ex.Message}");
-            return;
+                case "w":
+                    caddyDownloadUrl =
+                        "https://github.com/nebulaqt/RPTB-Storage/raw/main/win/caddy.exe";
+                    downloadedFilePath = "caddy.exe";
+                    break;
+                case "l":
+                    caddyDownloadUrl =
+                        "https://github.com/nebulaqt/RPTB-Storage/raw/main/linux/caddy";
+                    downloadedFilePath = "caddy";
+                    break;
+                case "m":
+                    caddyDownloadUrl =
+                        "https://github.com/nebulaqt/RPTB-Storage/raw/main/mac/caddy";
+                    downloadedFilePath = "caddy";
+                    break;
+                default:
+                    Console.WriteLine("Unsupported operating system.");
+                    return;
+            }
+
+            using var client = new HttpClient();
+
+            try
+            {
+                using var response = await client.GetAsync(new Uri(caddyDownloadUrl));
+                response.EnsureSuccessStatusCode();
+
+                await using var contentStream = await response.Content.ReadAsStreamAsync();
+
+                await using var fileStream =
+                    new FileStream(downloadedFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+                const int bufferSize = 8192;
+                var buffer = new byte[bufferSize];
+                long totalBytesRead = 0;
+
+                var totalBytes = response.Content.Headers.ContentLength ?? 0;
+
+                int bytesRead;
+                do
+                {
+                    bytesRead = await contentStream.ReadAsync(buffer);
+                    if (bytesRead == 0) continue;
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    totalBytesRead += bytesRead;
+                    DrawProgressBar(totalBytesRead, totalBytes);
+                } while (bytesRead != 0);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error occurred during download: {ex.Message}");
+                return;
+            }
+
+            if (selectedOperatingSystem == "l")
+            {
+                // Set executable permission for Linux.
+                SetExecutablePermissionForLinux(downloadedFilePath);
+            }
         }
 
-        try
+        private static void DrawProgressBar(long totalBytesRead, long totalBytes)
         {
-            ExtractArchive(downloadedZipPath, caddyExecutablePath);
+            var numChars = (int)Math.Ceiling(totalBytesRead / (totalBytes / 40.0));
+            var percentage = (int)Math.Round((double)(totalBytesRead * 100) / totalBytes);
+            Console.Write("\r[{0} {1}] {2}%", new string('#', numChars), new string(' ', 40 - numChars), percentage);
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error occurred during extraction: {ex.Message}");
-        }
-        finally
+
+        private static void SetExecutablePermissionForLinux(string filePath)
         {
             try
             {
-                File.Delete(downloadedZipPath);
+                // Use the 'bash' command to execute 'chmod' within WSL.
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = "bash",
+                    Arguments = $"-c \"chmod +x {filePath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process();
+                process.StartInfo = processInfo;
+                process.Start();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0)
+                    Console.WriteLine($"Failed to set executable permission. Exit code: {process.ExitCode}");
             }
-            catch (IOException ioEx)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Error occurred during file cleanup: {ioEx.Message}");
-                Console.ReadKey();
+                Console.WriteLine($"Error occurred while setting executable permission: {ex.Message}");
             }
         }
-    }
-
-    private static void DrawProgressBar(long totalBytesRead, long totalBytes)
-    {
-        var numChars = (int)Math.Ceiling(totalBytesRead / (totalBytes / 40.0));
-        var percentage = (int)Math.Round((double)(totalBytesRead * 100) / totalBytes);
-        Console.Write("\r[{0} {1}] {2}%", new string('#', numChars), new string(' ', 40 - numChars), percentage);
-    }
-
-    private static void ExtractArchive(string archivePath, string extractPath)
-    {
-        using var archive = ArchiveFactory.Open(archivePath);
-
-        var entryKey = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "caddy.exe" : "caddy";
-        var entry = archive.Entries.FirstOrDefault(e => e.Key.Equals(entryKey, StringComparison.OrdinalIgnoreCase));
-
-        entry?.WriteTo(new FileStream(extractPath, FileMode.Create));
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace RPTB.Utilities;
@@ -13,7 +14,7 @@ public static class ConfigManager
         {
             var caddyFileContent = GetCaddyFileContent();
             File.WriteAllText(FilePath, caddyFileContent);
-            FormatCaddyfile();
+            ValidateCaddyfile();
             Console.WriteLine("Caddyfile created successfully.");
         }
         catch (Exception ex)
@@ -28,7 +29,7 @@ public static class ConfigManager
         {
             var newEntry = GetNewEntry();
             File.AppendAllText(FilePath, newEntry);
-            FormatCaddyfile();
+            ValidateCaddyfile();
             Console.WriteLine("Custom text added as a new entry to Caddyfile successfully.");
         }
         catch (Exception ex)
@@ -63,22 +64,6 @@ public static class ConfigManager
         var ipAddressAndPort = Console.ReadLine();
         var newlinePrefix = File.Exists(FilePath) ? Environment.NewLine : string.Empty;
         return $"{newlinePrefix}{subdomain} {{\n    reverse_proxy {ipAddressAndPort}\n}}";
-    }
-
-    private static void FormatCaddyfile()
-    {
-        try
-        {
-            var content = File.ReadAllText(FilePath);
-            var pattern = $@"{Regex.Escape(Environment.NewLine)}{{2,}}";
-            var replacement = Environment.NewLine + Environment.NewLine;
-            var formattedContent = Regex.Replace(content, pattern, replacement);
-            File.WriteAllText(FilePath, formattedContent);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error formatting Caddyfile: {ex.Message}");
-        }
     }
 
     public static void ListEntries()
@@ -121,9 +106,9 @@ public static class ConfigManager
             }
 
             Console.Write("Select the entry to update (enter the number): ");
-            if (int.TryParse(Console.ReadLine(), out var selectedIndex) && entries.ContainsKey(selectedIndex))
+            if (int.TryParse(Console.ReadLine(), out var selectedIndex) && entries.TryGetValue(selectedIndex, out var value))
             {
-                var selectedEntry = entries[selectedIndex];
+                var selectedEntry = value;
                 Console.Write($"Enter new subdomain ({selectedEntry}): ");
                 var newSubdomain = Console.ReadLine();
                 Console.Write($"Enter new IP address and port ({selectedEntry}): ");
@@ -189,37 +174,33 @@ public static class ConfigManager
     {
         try
         {
-            var content = File.ReadAllText(FilePath);
-            var entryRegex = new Regex(@"(?<entry>(?<subdomain>[\w.-]+)\s*{\s*reverse_proxy\s*(?<ip>[\w.:]+)\s*})");
-            var matches = entryRegex.Matches(content);
-            var isValid = true;
-            var validatedEntries = new StringBuilder();
-            foreach (Match match in matches)
+            var process = new Process
             {
-                var entry = match.Groups["entry"].Value;
-                var subdomain = match.Groups["subdomain"].Value;
-                var ip = match.Groups["ip"].Value;
-                if (string.IsNullOrWhiteSpace(subdomain) || string.IsNullOrWhiteSpace(ip))
+                StartInfo = new ProcessStartInfo
                 {
-                    Console.WriteLine($"Invalid entry found: {entry}");
-                    isValid = false;
+                    FileName = "caddy",
+                    Arguments = "fmt ./caddyfile -w",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
                 }
-                else
-                {
-                    validatedEntries.AppendLine(entry);
-                }
-            }
+            };
 
-            Console.WriteLine(isValid
-                ? "All entries in Caddyfile are valid."
-                : "Caddyfile contains one or more invalid entries. Please fix them.");
-            Console.WriteLine("Validated Caddyfile content:");
-            Console.WriteLine(validatedEntries.ToString());
-            File.WriteAllText(FilePath, validatedEntries.ToString());
+            process.Start();
+
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+
+            process.WaitForExit();
+
+            Console.WriteLine(process.ExitCode == 0
+                ? "Caddyfile is valid and formatted successfully."
+                : $"Error validating and formatting Caddyfile: {error}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error validating Caddyfile: {ex.Message}");
+            Console.WriteLine($"Error validating and formatting Caddyfile: {ex.Message}");
         }
     }
 }

@@ -13,16 +13,17 @@ internal static class Program
         { "4", ConfigManager.DeleteEntry },
         { "5", () => RunWithPause(ConfigManager.ListEntries) },
         { "6", () => RunWithPause(ConfigManager.ValidateCaddyfile) },
-        { "7", ProcessManager.StartCaddyProcess },
+        { "7", () => RunWithPause(() => ProcessManager.StartCaddyProcess(_selectedOperatingSystem)) },
         { "8", ProcessManager.StopCaddyProcess },
-        { "9", ProcessManager.RestartCaddyProcess },
-        { "10", () => RunWithPause(() => Updater.DownloadCaddyPortableAsync().Wait()) },
+        { "9", () => RunWithPause(() => ProcessManager.RestartCaddyProcess(_selectedOperatingSystem)) },
+        { "10", () => RunWithPause(() => Updater.DownloadCaddyPortableAsync(_selectedOperatingSystem).Wait()) },
         { "11", AskUserForDomain },
-        { "12", ExitProgram }
+        { "12", () => RunWithPause(() => ProcMon.MonitorCaddyProcess(_selectedOperatingSystem)) },
+        { "13", ExitProgram }
     };
 
-    private static readonly List<string> MenuOptions = new()
-    {
+    private static readonly List<string> MenuOptions =
+    [
         "Create Config",
         "Add Reverse Proxy Entry",
         "Edit Reverse Proxy Entry",
@@ -34,11 +35,16 @@ internal static class Program
         "Restart",
         "Update Caddy",
         "Check Domain",
+        "Monitor Process",
         "Exit"
-    };
+    ];
+
+    private static string? _selectedOperatingSystem;
 
     private static void Main()
     {
+        SelectOperatingSystem();
+
         var exitRequested = false;
 
         do
@@ -47,6 +53,7 @@ internal static class Program
             DisplayAsciiArt();
             Console.WriteLine(SystemInfo.GetOperatingSystemInfo());
             Console.WriteLine(SystemInfo.GetRuntimeInfo());
+            Console.WriteLine($"Selected Operating System: {_selectedOperatingSystem}");
             Console.WriteLine();
             DisplayMenuOptions(MenuOptions);
 
@@ -68,6 +75,25 @@ internal static class Program
                 Console.WriteLine("Invalid choice. Please enter a valid option.");
             }
         } while (!exitRequested);
+    }
+
+    private static void SelectOperatingSystem()
+    {
+        Console.WriteLine("Select the operating system:");
+        Console.WriteLine("Enter 'w' for Windows, 'l' for Linux, 'm' for macOS:");
+        _selectedOperatingSystem = Console.ReadLine()?.Trim().ToLower();
+
+        switch (_selectedOperatingSystem)
+        {
+            case "w":
+            case "l":
+            case "m":
+                break;
+            default:
+                Console.WriteLine("Unsupported operating system. Defaulting to Windows.");
+                _selectedOperatingSystem = "w"; // Default to Windows
+                break;
+        }
     }
 
     private static void RunWithPause(Action action)
@@ -101,13 +127,14 @@ internal static class Program
     {
         const string logo = """
                             
-                                                    _________________________________________
-                                                    \______   \______   \__    ___/\______   \
-                                                     |       _/|     ___/ |    |    |    |  _/
-                                                     |    |   \|    |     |    |    |    |   \
-                                                     |____|_  /|____|     |____|    |______  /
-                                                            \/                             \/
-                                                    
+                                                                                _________________________________________
+                                                                                \______   \______   \__    ___/\______   \
+                                                                                 |       _/|     ___/ |    |    |    |  _/
+                                                                                 |    |   \|    |     |    |    |    |   \
+                                                                                 |____|_  /|____|     |____|    |______  /
+                                                                                        \/                             \/
+                                                                                
+                                                        
                             """;
         var logoLines = logo.Split('\n');
         var consoleWidth = Console.WindowWidth;
