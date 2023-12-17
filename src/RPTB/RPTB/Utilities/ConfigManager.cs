@@ -106,18 +106,18 @@ public static class ConfigManager
             }
 
             Console.Write("Select the entry to update (enter the number): ");
-            if (int.TryParse(Console.ReadLine(), out var selectedIndex) && entries.TryGetValue(selectedIndex, out var value))
+            if (int.TryParse(Console.ReadLine(), out var selectedIndex) &&
+                entries.TryGetValue(selectedIndex, out var value))
             {
-                var selectedEntry = value;
-                Console.Write($"Enter new subdomain ({selectedEntry}): ");
+                Console.Write($"Enter new subdomain ({value}): ");
                 var newSubdomain = Console.ReadLine();
-                Console.Write($"Enter new IP address and port ({selectedEntry}): ");
+                Console.Write($"Enter new IP address and port ({value}): ");
                 var newIpAddressAndPort = Console.ReadLine();
-                var updatedEntry = selectedEntry
-                    .Replace($"{{\n    reverse_proxy {selectedEntry}\n}}",
+                var updatedEntry = value
+                    .Replace($"{{\n    reverse_proxy {value}\n}}",
                         $"{{\n    reverse_proxy {newIpAddressAndPort}\n}}")
-                    .Replace($"{selectedEntry}", $"{newSubdomain} {{\n    reverse_proxy {newIpAddressAndPort}\n}}");
-                content = content.Replace(selectedEntry, updatedEntry);
+                    .Replace($"{value}", $"{newSubdomain} {{\n    reverse_proxy {newIpAddressAndPort}\n}}");
+                content = content.Replace(value, updatedEntry);
                 File.WriteAllText(FilePath, content);
 
                 Console.WriteLine("Entry updated successfully.");
@@ -189,7 +189,7 @@ public static class ConfigManager
 
             process.Start();
 
-            var output = process.StandardOutput.ReadToEnd();
+            process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
 
             process.WaitForExit();
