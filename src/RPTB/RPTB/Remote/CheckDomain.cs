@@ -1,4 +1,4 @@
-namespace RPTB.Utilities;
+namespace RPTB.Remote;
 
 public static class CheckDomain
 {

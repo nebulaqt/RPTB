@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 
-namespace RPTB.Utilities;
+namespace RPTB.Process;
 
-public static class ProcMon
+public static class ProcessMonitor
 {
     private const string UniqueTitle = "RPTB - Caddy";
 
@@ -42,7 +42,7 @@ public static class ProcMon
 
     private static bool IsProcessRunning(string processName)
     {
-        var processes = Process.GetProcessesByName(processName);
+        var processes = System.Diagnostics.Process.GetProcessesByName(processName);
         return processes.Length > 0;
     }
 
@@ -54,20 +54,20 @@ public static class ProcMon
             Arguments = $"/C title {UniqueTitle} && caddy run"
         };
 
-        Process.Start(startInfo);
+        System.Diagnostics.Process.Start(startInfo);
 
         Console.WriteLine($"{processName} process started on Windows with unique title.");
     }
 
     private static void StartProcessOnLinux(string processName)
     {
-        Process.Start("caddy", "run");
+        System.Diagnostics.Process.Start("caddy", "run");
         Console.WriteLine($"{processName} process started on Linux.");
     }
 
     private static void StartProcessOnMacOS(string processName)
     {
-        Process.Start("caddy", "run");
+        System.Diagnostics.Process.Start("caddy", "run");
         Console.WriteLine($"{processName} process started on macOS.");
     }
 }

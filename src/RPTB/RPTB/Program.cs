@@ -1,10 +1,18 @@
-﻿using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using Newtonsoft.Json;
+using RPTB.Config;
+using RPTB.Process;
+using RPTB.Remote;
 using RPTB.Utilities;
-
-namespace RPTB;
 
 internal static class Program
 {
+    // Load configuration
+    private static AppConfig? _appConfig = AppConfig.Load("appconfig.json");
+
     private static readonly Dictionary<string, Action> Actions = new()
     {
         { "1", ConfigManager.CreateConfig },
@@ -18,18 +26,18 @@ internal static class Program
         { "9", () => RunWithPause(() => ProcessManager.RestartCaddyProcess(_selectedOperatingSystem)) },
         { "10", () => RunWithPause(() => Updater.DownloadCaddyPortableAsync(_selectedOperatingSystem).Wait()) },
         { "11", AskUserForDomain },
-        { "12", () => RunWithPause(() => ProcMon.MonitorCaddyProcess(_selectedOperatingSystem)) },
+        { "12", () => RunWithPause(() => ProcessMonitor.MonitorCaddyProcess(_selectedOperatingSystem)) },
         { "13", ExitProgram }
     };
 
-    private static readonly List<string> MenuOptions =
-    [
-        "Create Config",
+    private static readonly List<string> MenuOptions = new List<string>
+    {
+        "Create AppConfig",
         "Add Reverse Proxy Entry",
         "Edit Reverse Proxy Entry",
         "Delete Reverse Proxy Entry",
         "List Reverse Proxy Entries",
-        "Validate Config",
+        "Validate AppConfig",
         "Start",
         "Stop",
         "Restart",
@@ -37,13 +45,22 @@ internal static class Program
         "Check Domain",
         "Monitor Process",
         "Exit"
-    ];
+    };
 
     private static string? _selectedOperatingSystem;
 
     private static void Main()
     {
-        SelectOperatingSystem();
+        if (_appConfig?.SelectedOperatingSystem == null)
+        {
+            // If the operating system is not set in the configuration, prompt the user to select it
+            SelectOperatingSystem();
+        }
+        else
+        {
+            // Use the operating system from the configuration
+            _selectedOperatingSystem = _appConfig.SelectedOperatingSystem;
+        }
 
         var exitRequested = false;
 
@@ -76,7 +93,6 @@ internal static class Program
             }
         } while (!exitRequested);
     }
-
     private static void SelectOperatingSystem()
     {
         Console.WriteLine("Select the operating system:");
@@ -94,6 +110,10 @@ internal static class Program
                 _selectedOperatingSystem = "w"; // Default to Windows
                 break;
         }
+
+        // Save the selected operating system in the configuration
+        _appConfig.SelectedOperatingSystem = _selectedOperatingSystem;
+        _appConfig.Save("appconfig.json");
     }
 
     private static void RunWithPause(Action action)
@@ -122,25 +142,28 @@ internal static class Program
         for (var i = 0; i < options.Count; i++) Console.WriteLine($"{i + 1}. {options[i]}");
         Console.Write("Enter Option: ");
     }
-
     private static void DisplayAsciiArt()
     {
-        const string logo = """
-                            
-                                                                                _________________________________________
-                                                                                \______   \______   \__    ___/\______   \
-                                                                                 |       _/|     ___/ |    |    |    |  _/
-                                                                                 |    |   \|    |     |    |    |    |   \
-                                                                                 |____|_  /|____|     |____|    |______  /
-                                                                                        \/                             \/
-                                                                                
-                                                        
-                            """;
+        const string logo = @"
+    _________________________________________
+    \______   \______   \__    ___/\______   \
+     |       _/|     ___/ |    |    |    |  _/
+     |    |   \|    |     |    |    |    |   \
+     |____|_  /|____|     |____|    |______  /
+            \/                             \/                                                                                                                                       
+        ";
+
         var logoLines = logo.Split('\n');
         var consoleWidth = Console.WindowWidth;
+
+        // Find the length of the longest line in the ASCII art
+        var maxLength = logoLines.Max(line => line.Length);
+
         foreach (var line in logoLines)
-            Console.WriteLine(
-                new StringBuilder().Append("{0,").Append(consoleWidth / 2 + line.Length / 2).Append('}').ToString(),
-                line);
+        {
+            var padding = Math.Max((consoleWidth - maxLength) / 2, 0);
+            Console.WriteLine(new string(' ', padding) + line);
+        }
     }
 }
+

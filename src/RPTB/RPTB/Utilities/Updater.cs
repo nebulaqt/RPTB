@@ -93,7 +93,7 @@ internal static class Updater
                 CreateNoWindow = true
             };
 
-            using var process = new Process();
+            using var process = new System.Diagnostics.Process();
             process.StartInfo = processInfo;
             process.Start();
             process.WaitForExit();

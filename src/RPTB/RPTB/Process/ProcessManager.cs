@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace RPTB.Utilities;
+namespace RPTB.Process;
 
 public static class ProcessManager
 {
@@ -21,12 +21,12 @@ public static class ProcessManager
 
     public static void StartCaddyProcess(string? selectedOperatingSystem)
     {
-        Process.Start(GetProcessStartInfo(selectedOperatingSystem))?.WaitForExit();
+        System.Diagnostics.Process.Start(GetProcessStartInfo(selectedOperatingSystem))?.WaitForExit();
     }
 
     public static void StopCaddyProcess()
     {
-        var localAll = Process.GetProcesses();
+        var localAll = System.Diagnostics.Process.GetProcesses();
         foreach (var p in localAll)
         {
             if (string.IsNullOrEmpty(p.MainWindowTitle) || !p.MainWindowTitle.Contains(UniqueTitle)) continue;

@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RPTB.Utilities;
+namespace RPTB.Config;
 
 public static class ConfigManager
 {
@@ -174,7 +174,7 @@ public static class ConfigManager
     {
         try
         {
-            var process = new Process
+            var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
                 {
