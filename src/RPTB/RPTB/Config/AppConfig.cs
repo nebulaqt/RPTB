@@ -1,11 +1,10 @@
-﻿using System.IO;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace RPTB.Config
 {
     public class AppConfig
     {
-        public string SelectedOperatingSystem { get; set; }
+        public string? SelectedOperatingSystem { get; set; }
 
         // Add other configuration properties as needed
 

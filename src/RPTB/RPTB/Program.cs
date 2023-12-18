@@ -1,42 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using Newtonsoft.Json;
-using RPTB.Config;
+﻿using RPTB.Config;
 using RPTB.Process;
 using RPTB.Remote;
 using RPTB.Utilities;
 
+namespace RPTB;
+
 internal static class Program
 {
     // Load configuration
-    private static AppConfig? _appConfig = AppConfig.Load("appconfig.json");
+    private static readonly AppConfig? AppConfig = AppConfig.Load("appconfig.json");
 
     private static readonly Dictionary<string, Action> Actions = new()
     {
         { "1", ConfigManager.CreateConfig },
-        { "2", ConfigManager.AddEntry },
-        { "3", ConfigManager.UpdateEntry },
-        { "4", ConfigManager.DeleteEntry },
-        { "5", () => RunWithPause(ConfigManager.ListEntries) },
-        { "6", () => RunWithPause(ConfigManager.ValidateCaddyfile) },
-        { "7", () => RunWithPause(() => ProcessManager.StartCaddyProcess(_selectedOperatingSystem)) },
-        { "8", ProcessManager.StopCaddyProcess },
-        { "9", () => RunWithPause(() => ProcessManager.RestartCaddyProcess(_selectedOperatingSystem)) },
-        { "10", () => RunWithPause(() => Updater.DownloadCaddyPortableAsync(_selectedOperatingSystem).Wait()) },
-        { "11", AskUserForDomain },
-        { "12", () => RunWithPause(() => ProcessMonitor.MonitorCaddyProcess(_selectedOperatingSystem)) },
-        { "13", ExitProgram }
+        { "2", /*ConfigManager.AddStaticFileServer*/ () => Console.WriteLine("Not implemented") },
+        { "3", ConfigManager.AddEntry },
+        { "4", ConfigManager.UpdateEntry },
+        { "5", ConfigManager.DeleteEntry },
+        { "6", () => RunWithPause(ConfigManager.ListEntries) },
+        { "7", () => RunWithPause(ConfigManager.ValidateCaddyfile) },
+        { "8", () => RunWithPause(() => ProcessManager.StartCaddyProcess(_selectedOperatingSystem)) },
+        { "9", ProcessManager.StopCaddyProcess },
+        { "10", () => RunWithPause(() => ProcessManager.RestartCaddyProcess(_selectedOperatingSystem)) },
+        { "11", () => RunWithPause(() => Updater.DownloadCaddyPortableAsync(_selectedOperatingSystem).Wait()) },
+        { "12", AskUserForDomain },
+        { "13", () => RunWithPause(() => ProcessMonitor.MonitorCaddyProcess(_selectedOperatingSystem)) },
+        { "14", ExitProgram }
     };
 
-    private static readonly List<string> MenuOptions = new List<string>
-    {
-        "Create AppConfig",
+
+    private static readonly List<string> MenuOptions =
+    [
+        "Initial Configuration",
+        "Add Static File Server",
         "Add Reverse Proxy Entry",
         "Edit Reverse Proxy Entry",
         "Delete Reverse Proxy Entry",
-        "List Reverse Proxy Entries",
+        "List Entries",
         "Validate AppConfig",
         "Start",
         "Stop",
@@ -45,22 +45,18 @@ internal static class Program
         "Check Domain",
         "Monitor Process",
         "Exit"
-    };
+    ];
 
     private static string? _selectedOperatingSystem;
 
     private static void Main()
     {
-        if (_appConfig?.SelectedOperatingSystem == null)
-        {
+        if (AppConfig?.SelectedOperatingSystem == null)
             // If the operating system is not set in the configuration, prompt the user to select it
             SelectOperatingSystem();
-        }
         else
-        {
             // Use the operating system from the configuration
-            _selectedOperatingSystem = _appConfig.SelectedOperatingSystem;
-        }
+            _selectedOperatingSystem = AppConfig.SelectedOperatingSystem;
 
         var exitRequested = false;
 
@@ -93,6 +89,7 @@ internal static class Program
             }
         } while (!exitRequested);
     }
+
     private static void SelectOperatingSystem()
     {
         Console.WriteLine("Select the operating system:");
@@ -112,8 +109,9 @@ internal static class Program
         }
 
         // Save the selected operating system in the configuration
-        _appConfig.SelectedOperatingSystem = _selectedOperatingSystem;
-        _appConfig.Save("appconfig.json");
+        if (AppConfig == null) return;
+        AppConfig.SelectedOperatingSystem = _selectedOperatingSystem;
+        AppConfig.Save("appconfig.json");
     }
 
     private static void RunWithPause(Action action)
@@ -142,6 +140,7 @@ internal static class Program
         for (var i = 0; i < options.Count; i++) Console.WriteLine($"{i + 1}. {options[i]}");
         Console.Write("Enter Option: ");
     }
+
     private static void DisplayAsciiArt()
     {
         const string logo = @"
@@ -166,4 +165,3 @@ internal static class Program
         }
     }
 }
-
