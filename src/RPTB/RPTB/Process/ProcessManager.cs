@@ -21,7 +21,7 @@ public static class ProcessManager
 
     public static void StartCaddyProcess(string? selectedOperatingSystem)
     {
-        System.Diagnostics.Process.Start(GetProcessStartInfo(selectedOperatingSystem))?.WaitForExit();
+        System.Diagnostics.Process.Start(GetProcessStartInfo(selectedOperatingSystem));
     }
 
     public static void StopCaddyProcess()
@@ -45,16 +45,29 @@ public static class ProcessManager
     {
         var exePath = GetExePath(selectedOperatingSystem);
 
-        // Check if running in WSL
-        if (Environment.OSVersion.Platform == PlatformID.Unix)
-            return new ProcessStartInfo("wsl", $"-d {exePath}")
-            {
-                UseShellExecute = false
-            };
-        return new ProcessStartInfo("cmd.exe")
+        // Check the selected operating system
+        switch (selectedOperatingSystem)
         {
-            UseShellExecute = true,
-            Arguments = $"/C title {UniqueTitle} && {exePath} run"
-        };
+            case "w":
+                // Start Caddy on Windows
+                return new ProcessStartInfo("cmd.exe")
+                {
+                    UseShellExecute = true,
+                    Arguments = $"/C title {UniqueTitle} && {exePath} run"
+                };
+
+            case "l":
+            case "m":
+                // Start Caddy in a screen session on Linux or macOS
+                const string screenPath = "/usr/bin/screen"; // Adjust the path based on your system
+                return new ProcessStartInfo(screenPath, $"-S caddyrptb -dm {exePath} run")
+                {
+                    UseShellExecute = false
+                };
+
+            default:
+                throw new ArgumentException("Unsupported operating system.");
+        }
     }
+
 }
