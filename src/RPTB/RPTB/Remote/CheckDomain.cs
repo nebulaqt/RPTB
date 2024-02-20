@@ -1,50 +1,49 @@
-namespace RPTB.Remote;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 
-public static class CheckDomain
+namespace RPTB.Remote
 {
-    private const string BaseUrl = "http://127.0.0.1:5000/domainstatus/{0}";
-    private const string ErrorMessage = "Error occurred: {0}";
-    private const string StatusMessage = "Status for {0} is {1}";
-    private static readonly HttpClient HttpClient = new();
-
-    public static async Task EvaluateDomainStatusAsync(string domain)
+    public static class CheckDomain
     {
-        try
+        private const string BaseUrl = "http://127.0.0.1:5000/domainstatus/{0}";
+        private const string ErrorMessage = "Error occurred: {0}";
+        private const string StatusMessage = "Status for {0} is {1}";
+
+        // HttpClient is designed to be reused, so it's better to create it once and reuse it.
+        private static readonly HttpClient HttpClient = new HttpClient();
+
+        // It's advisable to use Task<string> instead of Task<string?> to avoid nullable reference types.
+        public static async Task EvaluateDomainStatusAsync(string domain)
         {
-            var requestUrl = BuildRequestUrl(domain);
+            try
+            {
+                var requestUrl = string.Format(BaseUrl, domain); // Using string interpolation is more efficient than Replace.
 
-            var response = await HttpClient.GetAsync(requestUrl);
-            var domainStatus = await GetDomainStatusAsync(response);
+                var response = await HttpClient.GetAsync(requestUrl);
+                response.EnsureSuccessStatusCode(); // Ensure the response is successful before processing.
 
-            PrintStatus(domain, domainStatus);
+                var domainStatus = await response.Content.ReadAsStringAsync();
+                PrintStatus(domain, domainStatus);
+            }
+            catch (HttpRequestException ex) // Catching specific exceptions for better error handling.
+            {
+                PrintError(ex);
+            }
+            catch (Exception ex)
+            {
+                PrintError(new Exception(string.Format(ErrorMessage, ex.Message)));
+            }
         }
-        catch (Exception ex)
+
+        private static void PrintStatus(string domain, string domainStatus)
         {
-            PrintError(ex);
+            Console.WriteLine(StatusMessage, domain, domainStatus);
         }
-    }
 
-    private static string BuildRequestUrl(string domain)
-    {
-        return BaseUrl.Replace("{0}", domain);
-    }
-
-    private static async Task<string?> GetDomainStatusAsync(HttpResponseMessage response)
-    {
-        if (!response.IsSuccessStatusCode) return null;
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        return responseBody is "Online" or "Offline" ? responseBody : "Offline";
-    }
-
-    private static void PrintStatus(string domain, string? domainStatus)
-    {
-        Console.WriteLine(StatusMessage, domain, domainStatus);
-    }
-
-    private static void PrintError(Exception ex)
-    {
-        Console.WriteLine(ErrorMessage, ex.Message);
+        private static void PrintError(Exception ex)
+        {
+            Console.WriteLine(ErrorMessage, ex.Message);
+        }
     }
 }

@@ -1,73 +1,82 @@
+using System;
 using System.Diagnostics;
+using System.IO;
 
-namespace RPTB.Process;
-
-public static class ProcessManager
+namespace RPTB.ProcUtilities
 {
-    private const string UniqueTitle = "RPTB - Caddy";
-
-    private static string GetExePath(string? selectedOperatingSystem)
+    public static class ProcessManager
     {
-        var exeFileName = selectedOperatingSystem switch
+        private const string _processName = "cmd.exe";
+        private static string _caddyPath = Path.Combine("proxydata", "caddy.exe");
+        private static string _arguments = $"/C \"{_caddyPath}\" run";
+        private const string _uniqueTitle = "RPTB - Caddy";
+
+        public static void StartCaddyProcess()
         {
-            "w" => "caddy.exe",
-            "l" => "caddy",
-            "m" => "caddy",
-            _ => throw new ArgumentException("Unsupported operating system.")
-        };
+            try
+            {
+                Process.Start(GetProcessStartInfo());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to start Caddy process: {ex.Message}");
+            }
+        }
 
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, exeFileName);
-    }
-
-    public static void StartCaddyProcess(string? selectedOperatingSystem)
-    {
-        System.Diagnostics.Process.Start(GetProcessStartInfo(selectedOperatingSystem));
-    }
-
-    public static void StopCaddyProcess()
-    {
-        var localAll = System.Diagnostics.Process.GetProcesses();
-        foreach (var p in localAll)
+        public static void StopCaddyProcess()
         {
-            if (string.IsNullOrEmpty(p.MainWindowTitle) || !p.MainWindowTitle.Contains(UniqueTitle)) continue;
-            p.Kill();
-            p.WaitForExit();
+            try
+            {
+                var processes = Process.GetProcesses();
+                foreach (var process in processes)
+                {
+                    if (IsCaddyProcess(process))
+                    {
+                        process.Kill();
+                        process.WaitForExit();
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to stop Caddy process: {ex.Message}");
+            }
+        }
+
+        public static bool IsCaddyProcess(Process process)
+        {
+            try
+            {
+                return !string.IsNullOrEmpty(process.MainWindowTitle) && process.MainWindowTitle.Contains(_uniqueTitle);
+            }
+            catch (Exception)
+            {
+                // Ignore exceptions and return false if accessing the MainWindowTitle fails
+                return false;
+            }
+        }
+
+
+
+
+        public static void RestartCaddyProcess()
+        {
+            StopCaddyProcess();
+            StartCaddyProcess();
+        }
+
+        private static ProcessStartInfo GetProcessStartInfo()
+        {
+            return new ProcessStartInfo(_processName)
+            {
+                UseShellExecute = true,
+                Arguments = $"/k title {_uniqueTitle} && {_caddyPath} run", // Set the window title and execute Caddy
+                WindowStyle = ProcessWindowStyle.Normal,
+                CreateNoWindow = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false
+            };
         }
     }
-
-    public static void RestartCaddyProcess(string? selectedOperatingSystem)
-    {
-        StopCaddyProcess();
-        StartCaddyProcess(selectedOperatingSystem);
-    }
-
-    private static ProcessStartInfo GetProcessStartInfo(string? selectedOperatingSystem)
-    {
-        var exePath = GetExePath(selectedOperatingSystem);
-
-        // Check the selected operating system
-        switch (selectedOperatingSystem)
-        {
-            case "w":
-                // Start Caddy on Windows
-                return new ProcessStartInfo("cmd.exe")
-                {
-                    UseShellExecute = true,
-                    Arguments = $"/C title {UniqueTitle} && {exePath} run"
-                };
-
-            case "l":
-            case "m":
-                // Start Caddy in a screen session on Linux or macOS
-                const string screenPath = "/usr/bin/screen"; // Adjust the path based on your system
-                return new ProcessStartInfo(screenPath, $"-S caddyrptb -dm {exePath} run")
-                {
-                    UseShellExecute = false
-                };
-
-            default:
-                throw new ArgumentException("Unsupported operating system.");
-        }
-    }
-
 }

@@ -1,206 +1,445 @@
-﻿using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Diagnostics;
 
-namespace RPTB.Config;
-
-public static class ConfigManager
+namespace RPTB.Config
 {
-    private const string FilePath = "./caddyfile";
-
-    public static void CreateConfig()
+    public static class ConfigManager
     {
-        try
-        {
-            var caddyFileContent = GetCaddyFileContent();
-            File.WriteAllText(FilePath, caddyFileContent);
-            ValidateCaddyfile();
-            Console.WriteLine("Caddyfile created successfully.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error creating Caddyfile: {ex.Message}");
-        }
-    }
+        private static readonly string CaddyfilePath = Path.Combine("proxydata", "Caddyfile");
 
-    public static void AddEntry()
-    {
-        try
+        public static void AddEntry()
         {
-            var newEntry = GetNewEntry();
-            File.AppendAllText(FilePath, newEntry);
-            ValidateCaddyfile();
-            Console.WriteLine("Custom text added as a new entry to Caddyfile successfully.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error updating Caddyfile: {ex.Message}");
-        }
-    }
+            Console.WriteLine("What type of entry do you want to add?");
+            Console.WriteLine("1. Static File Server");
+            Console.WriteLine("2. Reverse Proxy");
 
-    private static string GetCaddyFileContent()
-    {
-        var caddyFileContent = new StringBuilder();
-        do
-        {
-            Console.Write("Enter subdomain (e.g., sub.domain.tld): ");
-            var subdomain = Console.ReadLine();
-            Console.Write("Enter IP address and port (e.g., 127.0.0.1:8095): ");
-            var ipAddressAndPort = Console.ReadLine();
-            caddyFileContent.AppendLine($"{subdomain} {{");
-            caddyFileContent.AppendLine($"    reverse_proxy {ipAddressAndPort}");
-            caddyFileContent.AppendLine("}");
-            Console.Write("Do you want to add another entry? (y/n): ");
-        } while (Console.ReadLine()?.ToLower() == "y");
-
-        return caddyFileContent.ToString();
-    }
-
-    private static string GetNewEntry()
-    {
-        Console.Write("Enter subdomain (e.g., sub.domain.tld): ");
-        var subdomain = Console.ReadLine();
-        Console.Write("Enter IP address and port (e.g., 127.0.0.1:8095): ");
-        var ipAddressAndPort = Console.ReadLine();
-        var newlinePrefix = File.Exists(FilePath) ? Environment.NewLine : string.Empty;
-        return $"{newlinePrefix}{subdomain} {{\n    reverse_proxy {ipAddressAndPort}\n}}";
-    }
-
-    public static void ListEntries()
-    {
-        try
-        {
-            Console.Clear();
-            var content = File.ReadAllText(FilePath);
-            var entryRegex = new Regex(@"(?<entry>(?<subdomain>[\w.-]+)\s*{\s*reverse_proxy\s*(?<ip>[\w.:]+)\s*})");
-            var matches = entryRegex.Matches(content);
-            foreach (Match match in matches)
+            int choice;
+            while (!int.TryParse(Console.ReadLine(), out choice) || (choice != 1 && choice != 2))
             {
-                var subdomain = match.Groups["subdomain"].Value;
-                var ip = match.Groups["ip"].Value;
-                Console.WriteLine($"{subdomain} : {ip}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error reading Caddyfile: {ex.Message}");
-        }
-    }
-
-    public static void UpdateEntry()
-    {
-        try
-        {
-            var content = File.ReadAllText(FilePath);
-            var entryRegex = new Regex(@"(?<entry>(?<subdomain>[\w.-]+)\s*{\s*reverse_proxy\s*(?<ip>[\w.:]+)\s*})");
-            var matches = entryRegex.Matches(content);
-            var entries = new Dictionary<int, string>();
-            for (var i = 0; i < matches.Count; i++)
-            {
-                var match = matches[i];
-                var entry = match.Groups["entry"].Value;
-                var subdomain = match.Groups["subdomain"].Value;
-                var ip = match.Groups["ip"].Value;
-                entries.Add(i + 1, entry);
-                Console.WriteLine($"{i + 1}. {subdomain} : {ip}");
+                Console.WriteLine("Invalid choice. Please enter 1 or 2.");
             }
 
-            Console.Write("Select the entry to update (enter the number): ");
-            if (int.TryParse(Console.ReadLine(), out var selectedIndex) &&
-                entries.TryGetValue(selectedIndex, out var value))
+            if (choice == 1)
             {
-                Console.Write($"Enter new subdomain ({value}): ");
-                var newSubdomain = Console.ReadLine();
-                Console.Write($"Enter new IP address and port ({value}): ");
-                var newIpAddressAndPort = Console.ReadLine();
-                var updatedEntry = value
-                    .Replace($"{{\n    reverse_proxy {value}\n}}",
-                        $"{{\n    reverse_proxy {newIpAddressAndPort}\n}}")
-                    .Replace($"{value}", $"{newSubdomain} {{\n    reverse_proxy {newIpAddressAndPort}\n}}");
-                content = content.Replace(value, updatedEntry);
-                File.WriteAllText(FilePath, content);
-
-                Console.WriteLine("Entry updated successfully.");
+                AddStaticFileServerEntry();
             }
             else
             {
-                Console.WriteLine("Invalid selection. No entry updated.");
+                AddReverseProxyEntry();
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error updating entry: {ex.Message}");
-        }
-    }
 
-    public static void DeleteEntry()
-    {
-        try
+        public static void UpdateEntry()
         {
-            var content = File.ReadAllText(FilePath);
-            var entryRegex = new Regex(@"(?<entry>(?<subdomain>[\w.-]+)\s*{\s*reverse_proxy\s*(?<ip>[\w.:]+)\s*})");
-            var matches = entryRegex.Matches(content);
-            var entries = new Dictionary<int, string>();
-            for (var i = 0; i < matches.Count; i++)
+            Console.WriteLine("What type of entry do you want to update?");
+            Console.WriteLine("1. Static File Server");
+            Console.WriteLine("2. Reverse Proxy");
+
+            int choice;
+            while (!int.TryParse(Console.ReadLine(), out choice) || (choice != 1 && choice != 2))
             {
-                var match = matches[i];
-                var entry = match.Groups["entry"].Value;
-                var subdomain = match.Groups["subdomain"].Value;
-                var ip = match.Groups["ip"].Value;
-                entries.Add(i + 1, entry);
-                Console.WriteLine($"{i + 1}. {subdomain} : {ip}");
+                Console.WriteLine("Invalid choice. Please enter 1 or 2.");
             }
 
-            Console.Write("Select the entry to delete (enter the number): ");
-            if (int.TryParse(Console.ReadLine(), out var selectedIndex) &&
-                entries.TryGetValue(selectedIndex, out var value))
+            if (choice == 1)
             {
-                content = content.Replace(value, string.Empty);
-                File.WriteAllText(FilePath, content);
-                Console.WriteLine("Entry deleted successfully.");
+                UpdateStaticFileServerEntry();
             }
             else
             {
-                Console.WriteLine("Invalid selection. No entry deleted.");
+                UpdateReverseProxyEntry();
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error deleting entry: {ex.Message}");
-        }
-    }
 
-    public static void ValidateCaddyfile()
-    {
-        try
+        public static void DeleteEntry()
         {
-            var process = new System.Diagnostics.Process
+            Console.WriteLine("What type of entry do you want to delete?");
+            Console.WriteLine("1. Static File Server");
+            Console.WriteLine("2. Reverse Proxy");
+
+            int choice;
+            while (!int.TryParse(Console.ReadLine(), out choice) || (choice != 1 && choice != 2))
             {
-                StartInfo = new ProcessStartInfo
+                Console.WriteLine("Invalid choice. Please enter 1 or 2.");
+            }
+
+            if (choice == 1)
+            {
+                DeleteStaticFileServerEntry();
+            }
+            else
+            {
+                DeleteReverseProxyEntry();
+            }
+        }
+
+        private static void AddStaticFileServerEntry()
+        {
+            try
+            {
+                Console.Write("Enter subdomain for static file server (e.g., dev.nobyl.net): ");
+                var domain = Console.ReadLine();
+                Console.Write("Enter root path for static files: ");
+                var rootPath = Console.ReadLine();
+
+                var entry = new Entry { Domain = domain, ProxyType = "file_server", ProxyDetails = rootPath };
+
+                AppendEntriesToFile(new List<Entry> { entry });
+                ValidateCaddyfile();
+                Console.WriteLine("Static file server added successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding static file server: {ex.Message}");
+            }
+        }
+
+        private static void UpdateStaticFileServerEntry()
+        {
+            try
+            {
+                var entries = ReadEntriesFromFile();
+                var staticFileServerEntries = entries.Where(entry => entry.ProxyType == "file_server").ToList();
+
+                if (staticFileServerEntries.Any())
                 {
-                    FileName = "caddy",
-                    Arguments = "fmt ./caddyfile -w",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
+                    ListAndSelectEntry(staticFileServerEntries, "update", (selectedEntries, selectedIndex) =>
+                    {
+                        Console.Write("Enter new subdomain: ");
+                        var newDomain = Console.ReadLine();
+                        Console.Write("Enter new root path for static files: ");
+                        var newRootPath = Console.ReadLine();
+
+                        selectedEntries[selectedIndex].Domain = newDomain;
+                        selectedEntries[selectedIndex].ProxyDetails = newRootPath;
+
+                        WriteEntriesToFile(entries);
+                        Console.WriteLine("Static file server entry updated successfully.");
+                    });
                 }
-            };
-
-            process.Start();
-
-            process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-
-            process.WaitForExit();
-
-            Console.WriteLine(process.ExitCode == 0
-                ? "Caddyfile is valid and formatted successfully."
-                : $"Error validating and formatting Caddyfile: {error}");
+                else
+                {
+                    Console.WriteLine("No static file server entries found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating static file server entry: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+
+
+
+        private static void DeleteStaticFileServerEntry()
         {
-            Console.WriteLine($"Error validating and formatting Caddyfile: {ex.Message}");
+            try
+            {
+                var entries = ReadEntriesFromFile();
+                var staticFileServerEntries = entries.Where(entry => entry.ProxyType == "file_server").ToList();
+
+                if (staticFileServerEntries.Any())
+                {
+                    ListAndSelectEntry(staticFileServerEntries, "delete", (selectedEntries, selectedIndex) =>
+                    {
+                        selectedEntries.RemoveAt(selectedIndex);
+                        // Write all entries except the deleted static file server entry
+                        var remainingEntries = entries.Where(entry => entry.ProxyType != "file_server").ToList();
+                        WriteEntriesToFile(remainingEntries);
+                        ValidateCaddyfile();
+                        Console.WriteLine("Static file server entry deleted successfully.");
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("No static file server entries found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting static file server entry: {ex.Message}");
+            }
         }
+
+
+
+        private static void AddReverseProxyEntry()
+        {
+            try
+            {
+                var entries = GetEntriesFromUser();
+                AppendEntriesToFile(entries);
+                ValidateCaddyfile();
+                Console.WriteLine("Reverse proxy entry added successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding reverse proxy entry: {ex.Message}");
+            }
+        }
+
+        private static void UpdateReverseProxyEntry()
+        {
+            try
+            {
+                var entries = ReadEntriesFromFile();
+                var reverseProxyEntries = entries.Where(entry => entry.ProxyType == "reverse_proxy").ToList();
+
+                if (reverseProxyEntries.Any())
+                {
+                    ListAndSelectEntry(reverseProxyEntries, "update", (selectedEntries, selectedIndex) =>
+                    {
+                        Console.Write("Enter new subdomain: ");
+                        var newDomain = Console.ReadLine();
+                        Console.Write("Enter new IP address and port: ");
+                        var newReverseProxy = Console.ReadLine();
+
+                        // Update only the selected reverse proxy entry
+                        selectedEntries[selectedIndex].Domain = newDomain;
+                        selectedEntries[selectedIndex].ProxyDetails = newReverseProxy;
+
+                        WriteEntriesToFile(entries);
+                        Console.WriteLine("Reverse proxy entry updated successfully.");
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("No reverse proxy entries found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating reverse proxy entry: {ex.Message}");
+            }
+        }
+
+
+
+        private static void DeleteReverseProxyEntry()
+        {
+            try
+            {
+                var entries = ReadEntriesFromFile();
+                var reverseProxyEntries = entries.Where(entry => entry.ProxyType == "reverse_proxy").ToList();
+
+                if (reverseProxyEntries.Any())
+                {
+                    ListAndSelectEntry(reverseProxyEntries, "delete", (selectedEntries, selectedIndex) =>
+                    {
+                        selectedEntries.RemoveAt(selectedIndex);
+                        // Write all entries except the deleted reverse proxy entry
+                        var remainingEntries = entries.Where(entry => entry.ProxyType != "reverse_proxy").ToList();
+                        WriteEntriesToFile(remainingEntries);
+                        ValidateCaddyfile();
+                        Console.WriteLine("Reverse proxy entry deleted successfully.");
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("No reverse proxy entries found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting reverse proxy entry: {ex.Message}");
+            }
+        }
+
+
+
+        private static List<Entry> GetEntriesFromUser()
+        {
+            var entries = new List<Entry>();
+            do
+            {
+                Console.Write("Enter subdomain (e.g., sub.domain.tld): ");
+                var domain = Console.ReadLine();
+                Console.Write("Enter IP address and port (e.g., 127.0.0.1:8095): ");
+                var reverseProxy = Console.ReadLine();
+                entries.Add(new Entry { Domain = domain, ProxyType = "reverse_proxy", ProxyDetails = reverseProxy });
+                Console.Write("Do you want to add another entry? (y/n): ");
+            } while (Console.ReadLine()?.Trim().ToLower() == "y");
+
+            return entries;
+        }
+
+        private static void WriteEntriesToFile(List<Entry> entries)
+        {
+            using (var writer = new StreamWriter(CaddyfilePath))
+            {
+                foreach (var entry in entries)
+                {
+                    WriteEntryToFile(writer, entry);
+                }
+            }
+        }
+
+        private static void AppendEntriesToFile(List<Entry> entries)
+        {
+            using (var writer = new StreamWriter(CaddyfilePath, true))
+            {
+                foreach (var entry in entries)
+                {
+                    WriteEntryToFile(writer, entry);
+                }
+            }
+        }
+
+        private static void WriteEntryToFile(StreamWriter writer, Entry entry)
+        {
+            writer.WriteLine($"{entry.Domain} {{");
+            if (entry.ProxyType == "file_server")
+            {
+                writer.WriteLine($"    root * {entry.ProxyDetails}");
+                writer.WriteLine("    file_server");
+            }
+            else
+            {
+                writer.WriteLine($"    reverse_proxy {entry.ProxyDetails}");
+            }
+            writer.WriteLine("}");
+        }
+
+        private static List<Entry> ReadEntriesFromFile()
+        {
+            var entries = new List<Entry>();
+            using (var reader = new StreamReader(CaddyfilePath))
+            {
+                string line;
+                Entry? currentEntry = null;
+
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line.Trim().EndsWith("{"))
+                    {
+                        currentEntry = new Entry { Domain = line.Trim().TrimEnd('{').Trim() };
+                    }
+                    else if (line.Trim() == "file_server")
+                    {
+                        if (currentEntry != null)
+                        {
+                            currentEntry.ProxyType = "file_server";
+                            entries.Add(currentEntry);
+                            currentEntry = null;
+                        }
+                    }
+                    else if (line.Trim().StartsWith("root") && currentEntry != null)
+                    {
+                        var rootPath = line.Trim().Split(' ').LastOrDefault();
+                        currentEntry.ProxyType = "file_server";
+                        currentEntry.ProxyDetails = rootPath;
+                        entries.Add(currentEntry);
+                        currentEntry = null;
+                    }
+                    else if (line.Trim().StartsWith("reverse_proxy") && currentEntry != null)
+                    {
+                        var reverseProxy = line.Trim().Split(' ')[1];
+                        currentEntry.ProxyType = "reverse_proxy";
+                        currentEntry.ProxyDetails = reverseProxy;
+                        entries.Add(currentEntry);
+                        currentEntry = null;
+                    }
+                }
+            }
+            return entries;
+        }
+
+        private static void ListAndSelectEntry(List<Entry> entries, string action, Action<List<Entry>, int> actionCallback)
+        {
+            if (entries.Any())
+            {
+                Console.WriteLine($"Select the entry to {action}:");
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {entries[i].Domain} : {entries[i].ProxyType} : {entries[i].ProxyDetails}");
+                }
+                Console.Write($"Enter the number of the entry to {action}: ");
+                if (int.TryParse(Console.ReadLine(), out int selectedIndex) && selectedIndex >= 1 && selectedIndex <= entries.Count)
+                {
+                    actionCallback(entries, selectedIndex - 1);
+                }
+                else
+                {
+                    Console.WriteLine("Invalid entry number.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("No entries found.");
+            }
+        }
+
+        public static void ListAllEntries()
+        {
+            var entries = ReadEntriesFromFile();
+
+            // Separate entries into file server and reverse proxy lists
+            var fileServerEntries = entries.Where(entry => entry.ProxyType == "file_server").ToList();
+            var reverseProxyEntries = entries.Where(entry => entry.ProxyType != "file_server").ToList();
+
+            Console.ForegroundColor = ConsoleColor.Cyan; // Set color to yellow for file server category
+            Console.WriteLine("Static File Server Entries:");
+            Console.ResetColor(); // Reset color
+
+            foreach (var entry in fileServerEntries)
+            {
+                Console.WriteLine($"{entry.Domain} : Static File Server : {entry.ProxyDetails}");
+            }
+
+            Console.ForegroundColor = ConsoleColor.Cyan; // Set color to cyan for reverse proxy category
+            Console.WriteLine("\nReverse Proxy Entries:");
+            Console.ResetColor(); // Reset color
+
+            foreach (var entry in reverseProxyEntries)
+            {
+                Console.WriteLine($"{entry.Domain} : Reverse Proxy : {entry.ProxyDetails}");
+            }
+        }
+
+
+
+
+        public static void ValidateCaddyfile()
+        {
+            try
+            {
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "proxydata", "caddy"), // Specify the path to the caddy executable
+                        Arguments = $"fmt \"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "proxydata", "Caddyfile")}\" -w", // Adjust the path to Caddyfile
+                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory, // Set the working directory to the application's base directory
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+                process.WaitForExit();
+
+                var output = process.StandardOutput.ReadToEnd();
+                var error = process.StandardError.ReadToEnd();
+
+                Console.WriteLine(string.IsNullOrWhiteSpace(error)
+                    ? "Caddyfile is valid and formatted successfully."
+                    : $"Error validating and formatting Caddyfile: {error}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error validating and formatting Caddyfile: {ex.Message}");
+            }
+        }
+    }
+
+    public class Entry
+    {
+        public string? Domain { get; set; }
+        public string? ProxyType { get; set; } // Indicates whether it's a reverse proxy or file server
+        public string? ProxyDetails { get; set; } // Details like IP address and port for reverse proxy or root path for file server
     }
 }

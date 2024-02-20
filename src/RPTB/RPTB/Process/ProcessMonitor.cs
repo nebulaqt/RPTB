@@ -1,73 +1,57 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
-namespace RPTB.Process;
-
-public static class ProcessMonitor
+namespace RPTB.ProcUtilities
 {
-    private const string UniqueTitle = "RPTB - Caddy";
-
-    public static void MonitorCaddyProcess(string? selectedOperatingSystem)
+    public static class ProcessMonitor
     {
-        const string processName = "caddy";
-        var isProcessRunning = IsProcessRunning(processName);
+        private static string _uniqueTitle = "RPTB - Caddy";
 
-        if (!isProcessRunning)
+        private static CancellationTokenSource? cancellationTokenSource;
+
+        public static async Task StartMonitoring()
         {
-            Console.WriteLine($"{processName} process is not running. Starting it now.");
+            cancellationTokenSource = new CancellationTokenSource();
+            await MonitorProcess(cancellationTokenSource.Token);
+        }
 
-            switch (selectedOperatingSystem?.ToLower())
+        public static void StopMonitoring()
+        {
+            cancellationTokenSource?.Cancel();
+        }
+
+        private static async Task MonitorProcess(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
             {
-                case "w":
-                    StartProcessOnWindows(processName);
-                    break;
+                if (!IsProcessRunning(_uniqueTitle))
+                {
+                    Console.WriteLine($"Caddy process is not running. Starting it now.");
+                    ProcessManager.StartCaddyProcess();
+                }
+                else
+                {
+                    Console.WriteLine($"Caddy process is already running.");
+                }
 
-                case "l":
-                    StartProcessOnLinux(processName);
-                    break;
-
-                case "m":
-                    StartProcessOnMacOS(processName);
-                    break;
-
-                default:
-                    Console.WriteLine("Invalid operating system code.");
-                    break;
+                // Wait for some time before checking again
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken); // Adjust the time interval as needed
             }
         }
-        else
+
+
+        private static bool IsProcessRunning(string uniqueTitle)
         {
-            Console.WriteLine($"{processName} process is already running.");
+            var processes = Process.GetProcesses();
+            foreach (var process in processes)
+            {
+                if (ProcessManager.IsCaddyProcess(process))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
-    }
-
-    private static bool IsProcessRunning(string processName)
-    {
-        var processes = System.Diagnostics.Process.GetProcessesByName(processName);
-        return processes.Length > 0;
-    }
-
-    private static void StartProcessOnWindows(string processName)
-    {
-        var startInfo = new ProcessStartInfo("cmd.exe")
-        {
-            UseShellExecute = true,
-            Arguments = $"/C title {UniqueTitle} && caddy run"
-        };
-
-        System.Diagnostics.Process.Start(startInfo);
-
-        Console.WriteLine($"{processName} process started on Windows with unique title.");
-    }
-
-    private static void StartProcessOnLinux(string processName)
-    {
-        System.Diagnostics.Process.Start("caddy", "run");
-        Console.WriteLine($"{processName} process started on Linux.");
-    }
-
-    private static void StartProcessOnMacOS(string processName)
-    {
-        System.Diagnostics.Process.Start("caddy", "run");
-        Console.WriteLine($"{processName} process started on macOS.");
     }
 }

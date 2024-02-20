@@ -1,109 +1,89 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Threading.Tasks;
 
-namespace RPTB.Utilities;
-
-internal static class Updater
+namespace RPTB.Utilities
 {
-    public static async Task DownloadCaddyPortableAsync(string? selectedOperatingSystem)
+    internal static class Updater
     {
-        Console.Clear();
-        Console.WriteLine("Updating Caddy...");
-
-        string caddyDownloadUrl;
-        string downloadedFilePath;
-
-        switch (selectedOperatingSystem)
+        public static async Task DownloadCaddyPortableAsync()
         {
-            case "w":
-                caddyDownloadUrl =
-                    "https://github.com/nebulaqt/RPTB-Storage/raw/main/win/caddy.exe";
-                downloadedFilePath = "caddy.exe";
-                break;
-            case "l":
-                caddyDownloadUrl =
-                    "https://github.com/nebulaqt/RPTB-Storage/raw/main/linux/caddy";
-                downloadedFilePath = "caddy";
-                break;
-            case "m":
-                caddyDownloadUrl =
-                    "https://github.com/nebulaqt/RPTB-Storage/raw/main/mac/caddy";
-                downloadedFilePath = "caddy";
-                break;
-            default:
-                Console.WriteLine("Unsupported operating system.");
-                return;
-        }
+            Console.Clear();
+            Console.WriteLine("Updating Caddy...");
 
-        using var client = new HttpClient();
+            const string downloadUrl = "https://github.com/caddyserver/caddy/releases/download/v2.7.6/caddy_2.7.6_windows_amd64.zip";
+            const string downloadedFileName = "caddy.zip";
+            const string extractionFolder = "proxydata";
 
-        try
-        {
-            using var response = await client.GetAsync(new Uri(caddyDownloadUrl));
-            response.EnsureSuccessStatusCode();
-
-            await using var contentStream = await response.Content.ReadAsStreamAsync();
-
-            await using var fileStream =
-                new FileStream(downloadedFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            const int bufferSize = 8192;
-            var buffer = new byte[bufferSize];
-            long totalBytesRead = 0;
-
-            var totalBytes = response.Content.Headers.ContentLength ?? 0;
-
-            int bytesRead;
-            do
+            try
             {
-                bytesRead = await contentStream.ReadAsync(buffer);
-                if (bytesRead == 0) continue;
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                totalBytesRead += bytesRead;
-                DrawProgressBar(totalBytesRead, totalBytes);
-            } while (bytesRead != 0);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error occurred during download: {ex.Message}");
-            return;
-        }
+                // Download Caddy zip file with progress
+                using var client = new HttpClient();
+                using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
 
-        if (selectedOperatingSystem == "l")
-            // Set executable permission for Linux.
-            SetExecutablePermissionForLinux(downloadedFilePath);
-    }
+                var totalBytes = response.Content.Headers.ContentLength ?? -1;
+                var bytesRead = 0L;
 
-    private static void DrawProgressBar(long totalBytesRead, long totalBytes)
-    {
-        var numChars = (int)Math.Ceiling(totalBytesRead / (totalBytes / 40.0));
-        var percentage = (int)Math.Round((double)(totalBytesRead * 100) / totalBytes);
-        Console.Write("\r[{0} {1}] {2}%", new string('#', numChars), new string(' ', 40 - numChars), percentage);
-    }
+                // Create a new directory for extraction
+                if (!Directory.Exists(extractionFolder))
+                {
+                    Directory.CreateDirectory(extractionFolder);
+                }
 
-    private static void SetExecutablePermissionForLinux(string filePath)
-    {
-        try
-        {
-            // Use the 'bash' command to execute 'chmod' within WSL.
-            var processInfo = new ProcessStartInfo
+                // Path to save downloaded file
+                var downloadedFilePath = Path.Combine(extractionFolder, downloadedFileName);
+
+                // Write the content to the file with progress
+                await using var contentStream = await response.Content.ReadAsStreamAsync();
+                using var fileStream = new FileStream(downloadedFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                var buffer = new byte[8192];
+                int read;
+                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, read);
+                    bytesRead += read;
+                    DrawProgressBar("Downloading", bytesRead, totalBytes);
+                }
+
+                // Close the file stream
+                await fileStream.FlushAsync();
+                fileStream.Close();
+
+                // Unzip the downloaded file to extraction folder with progress
+                using var archive = ZipFile.OpenRead(downloadedFilePath);
+                foreach (var entry in archive.Entries)
+                {
+                    var entryExtractPath = Path.Combine(extractionFolder, entry.FullName);
+                    entry.ExtractToFile(entryExtractPath, true);
+                    DrawProgressBar("Extracting", bytesRead, totalBytes);
+                }
+
+                // Close the archive
+                archive.Dispose();
+
+                // Delete the downloaded zip file
+                File.Delete(downloadedFilePath);
+
+                Console.WriteLine("\nCaddy update completed successfully.");
+            }
+            catch (Exception ex)
             {
-                FileName = "bash",
-                Arguments = $"-c \"chmod +x {filePath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = new System.Diagnostics.Process();
-            process.StartInfo = processInfo;
-            process.Start();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-                Console.WriteLine($"Failed to set executable permission. Exit code: {process.ExitCode}");
+                Console.WriteLine($"Error occurred during update: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+
+        private static void DrawProgressBar(string action, long bytesRead, long totalBytes)
         {
-            Console.WriteLine($"Error occurred while setting executable permission: {ex.Message}");
+            var progressPercentage = totalBytes <= 0 ? 100 : (int)(bytesRead * 100 / totalBytes);
+            var progressLength = Console.WindowWidth - 20; // Adjust according to your console window width
+            var progressBar = new string('#', progressLength * progressPercentage / 100) +
+                              new string('-', progressLength - progressLength * progressPercentage / 100);
+            Console.Write($"\r{action} [{progressBar}] {progressPercentage}%");
         }
+
     }
 }
