@@ -1,6 +1,6 @@
 # Remote Proxy Toolbox (RPTB)
 
-Remote Proxy Toolbox (RPTB) is a command-line application designed to make managing Caddy servers easier. Additionally, it provides the functionality to check your reverse proxy status from outside your network using an API hosted on a Vultr VPS. This API can be self-hosted on your own VPS or any other location of your choice. You will need to recompile the application with the IP address of your own API in the `CheckDomain.cs` file, specifically within the `private const string BaseUrl` variable.
+Remote Proxy Toolbox (RPTB) is a command-line application designed to make managing Caddy servers easier. Additionally, it provides the functionality to check your reverse proxy status from outside your network using an API hosted on a Vultr VPS. This API can be self-hosted on your own VPS or any other location of your choice. You will need to recompile the application with the IP address of your own API in the `CheckDomain.cs` file, specifically within the `private const string BaseUrl` variable if you do not wish to use the default host i provide.
 
 ## Overview
 
