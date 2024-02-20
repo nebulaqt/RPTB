@@ -1,4 +1,4 @@
-# RPTB (Reverse Proxy Tool Belt)
+# RPTB (Reverse Proxy Tool Box)
 
 RPTB is a command-line tool for managing reverse proxy configurations. It provides a set of actions to configure, manage, and monitor reverse proxy entries and related processes.
 
