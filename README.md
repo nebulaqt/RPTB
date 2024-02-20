@@ -15,7 +15,6 @@ RPTB provides several modules responsible for different aspects of Caddy server 
 
 - **Menu-Driven Interface:** Utilizes a console-based menu system for intuitive interaction.
 - **Process Monitoring:** Allows toggling of process monitoring to track the status of Caddy server processes.
-- **Dynamic Logo:** Displays a dynamically centered logo for visual appeal and branding.
 - **Domain Checking:** Enables users to asynchronously check the status of domains used in Caddy server configurations.
 - **Caddy Update:** Supports downloading the latest updates for Caddy server tools and configurations.
 
