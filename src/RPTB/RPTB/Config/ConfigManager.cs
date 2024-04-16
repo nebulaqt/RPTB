@@ -65,7 +65,7 @@ public static class ConfigManager
 
             var entry = new Entry { Domain = domain, ProxyType = "file_server", ProxyDetails = rootPath };
 
-            AppendEntriesToFile(new List<Entry> { entry });
+            AppendEntriesToFile([entry]);
             ValidateCaddyfile();
             Console.WriteLine("Static file server added successfully.");
         }
@@ -113,7 +113,7 @@ public static class ConfigManager
             var entries = ReadEntriesFromFile();
             var staticFileServerEntries = entries.Where(entry => entry.ProxyType == "file_server").ToList();
 
-            if (staticFileServerEntries.Any())
+            if (staticFileServerEntries.Count != 0)
                 ListAndSelectEntry(staticFileServerEntries, "delete", (selectedEntries, selectedIndex) =>
                 {
                     selectedEntries.RemoveAt(selectedIndex);
@@ -155,7 +155,7 @@ public static class ConfigManager
             var entries = ReadEntriesFromFile();
             var reverseProxyEntries = entries.Where(entry => entry.ProxyType == "reverse_proxy").ToList();
 
-            if (reverseProxyEntries.Any())
+            if (reverseProxyEntries.Count != 0)
                 ListAndSelectEntry(reverseProxyEntries, "update", (selectedEntries, selectedIndex) =>
                 {
                     Console.Write("Enter new subdomain: ");
@@ -187,7 +187,7 @@ public static class ConfigManager
             var entries = ReadEntriesFromFile();
             var reverseProxyEntries = entries.Where(entry => entry.ProxyType == "reverse_proxy").ToList();
 
-            if (reverseProxyEntries.Any())
+            if (reverseProxyEntries.Count != 0)
                 ListAndSelectEntry(reverseProxyEntries, "delete", (selectedEntries, selectedIndex) =>
                 {
                     selectedEntries.RemoveAt(selectedIndex);
@@ -225,18 +225,14 @@ public static class ConfigManager
 
     private static void WriteEntriesToFile(List<Entry> entries)
     {
-        using (var writer = new StreamWriter(CaddyfilePath))
-        {
-            foreach (var entry in entries) WriteEntryToFile(writer, entry);
-        }
+        using var writer = new StreamWriter(CaddyfilePath);
+        foreach (var entry in entries) WriteEntryToFile(writer, entry);
     }
 
     private static void AppendEntriesToFile(List<Entry> entries)
     {
-        using (var writer = new StreamWriter(CaddyfilePath, true))
-        {
-            foreach (var entry in entries) WriteEntryToFile(writer, entry);
-        }
+        using var writer = new StreamWriter(CaddyfilePath, true);
+        foreach (var entry in entries) WriteEntryToFile(writer, entry);
     }
 
     private static void WriteEntryToFile(StreamWriter writer, Entry entry)
@@ -258,49 +254,44 @@ public static class ConfigManager
     private static List<Entry> ReadEntriesFromFile()
     {
         var entries = new List<Entry>();
-        using (var reader = new StreamReader(CaddyfilePath))
-        {
-            string line;
-            Entry? currentEntry = null;
+        using var reader = new StreamReader(CaddyfilePath);
+        Entry? currentEntry = null;
 
-            while ((line = reader.ReadLine()) != null)
-                if (line.Trim().EndsWith("{"))
-                {
-                    currentEntry = new Entry { Domain = line.Trim().TrimEnd('{').Trim() };
-                }
-                else if (line.Trim() == "file_server")
-                {
-                    if (currentEntry != null)
-                    {
-                        currentEntry.ProxyType = "file_server";
-                        entries.Add(currentEntry);
-                        currentEntry = null;
-                    }
-                }
-                else if (line.Trim().StartsWith("root") && currentEntry != null)
-                {
-                    var rootPath = line.Trim().Split(' ').LastOrDefault();
-                    currentEntry.ProxyType = "file_server";
-                    currentEntry.ProxyDetails = rootPath;
-                    entries.Add(currentEntry);
-                    currentEntry = null;
-                }
-                else if (line.Trim().StartsWith("reverse_proxy") && currentEntry != null)
-                {
-                    var reverseProxy = line.Trim().Split(' ')[1];
-                    currentEntry.ProxyType = "reverse_proxy";
-                    currentEntry.ProxyDetails = reverseProxy;
-                    entries.Add(currentEntry);
-                    currentEntry = null;
-                }
-        }
+        while (reader.ReadLine() is { } line)
+            if (line.Trim().EndsWith("{"))
+            {
+                currentEntry = new Entry { Domain = line.Trim().TrimEnd('{').Trim() };
+            }
+            else if (line.Trim() == "file_server")
+            {
+                if (currentEntry == null) continue;
+                currentEntry.ProxyType = "file_server";
+                entries.Add(currentEntry);
+                currentEntry = null;
+            }
+            else if (line.Trim().StartsWith("root") && currentEntry != null)
+            {
+                var rootPath = line.Trim().Split(' ').LastOrDefault();
+                currentEntry.ProxyType = "file_server";
+                currentEntry.ProxyDetails = rootPath;
+                entries.Add(currentEntry);
+                currentEntry = null;
+            }
+            else if (line.Trim().StartsWith("reverse_proxy") && currentEntry != null)
+            {
+                var reverseProxy = line.Trim().Split(' ')[1];
+                currentEntry.ProxyType = "reverse_proxy";
+                currentEntry.ProxyDetails = reverseProxy;
+                entries.Add(currentEntry);
+                currentEntry = null;
+            }
 
         return entries;
     }
 
     private static void ListAndSelectEntry(List<Entry> entries, string action, Action<List<Entry>, int> actionCallback)
     {
-        if (entries.Any())
+        if (entries.Count != 0)
         {
             Console.WriteLine($"Select the entry to {action}:");
             for (var i = 0; i < entries.Count; i++)
@@ -367,7 +358,7 @@ public static class ConfigManager
             process.Start();
             process.WaitForExit();
 
-            var output = process.StandardOutput.ReadToEnd();
+            process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
 
             Console.WriteLine(string.IsNullOrWhiteSpace(error)
