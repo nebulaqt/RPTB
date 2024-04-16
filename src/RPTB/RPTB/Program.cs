@@ -43,7 +43,6 @@ internal static class Program
 
     private static void Initialize()
     {
-        Console.WriteLine("Selected Operating System: Windows");
     }
 
     private static void RunMainMenuLoop()
