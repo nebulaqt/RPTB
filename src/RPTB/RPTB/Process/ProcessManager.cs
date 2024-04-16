@@ -7,7 +7,6 @@ public static class ProcessManager
     private const string ProcessName = "cmd.exe";
     private const string UniqueTitle = "RPTB - Caddy";
     private static readonly string CaddyPath = Path.Combine("proxydata", "caddy.exe");
-    private static string _arguments = $"/C \"{CaddyPath}\" run";
 
     public static void StartCaddyProcess()
     {
