@@ -6,10 +6,10 @@ namespace RPTB.ProcUtilities
 {
     public static class ProcessManager
     {
-        private const string _processName = "cmd.exe";
+        private const string ProcessName = "cmd.exe";
         private static string _caddyPath = Path.Combine("proxydata", "caddy.exe");
         private static string _arguments = $"/C \"{_caddyPath}\" run";
-        private const string _uniqueTitle = "RPTB - Caddy";
+        private const string UniqueTitle = "RPTB - Caddy";
 
         public static void StartCaddyProcess()
         {
@@ -48,7 +48,7 @@ namespace RPTB.ProcUtilities
         {
             try
             {
-                return !string.IsNullOrEmpty(process.MainWindowTitle) && process.MainWindowTitle.Contains(_uniqueTitle);
+                return !string.IsNullOrEmpty(process.MainWindowTitle) && process.MainWindowTitle.Contains(UniqueTitle);
             }
             catch (Exception)
             {
@@ -68,10 +68,10 @@ namespace RPTB.ProcUtilities
 
         private static ProcessStartInfo GetProcessStartInfo()
         {
-            return new ProcessStartInfo(_processName)
+            return new ProcessStartInfo(ProcessName)
             {
                 UseShellExecute = true,
-                Arguments = $"/k title {_uniqueTitle} && {_caddyPath} run", // Set the window title and execute Caddy
+                Arguments = $"/k title {UniqueTitle} && {_caddyPath} run", // Set the window title and execute Caddy
                 WindowStyle = ProcessWindowStyle.Normal,
                 CreateNoWindow = false,
                 RedirectStandardOutput = false,

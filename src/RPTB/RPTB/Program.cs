@@ -9,7 +9,7 @@ namespace RPTB
 {
     internal static class Program
     {
-        private static bool isMonitoring = false;
+        private static bool _isMonitoring;
 
         private const string Logo = @"
     _________________________________________
@@ -52,14 +52,14 @@ namespace RPTB
         {
             while (true)
             {
-                DisplayMainMenu(isMonitoring);
+                DisplayMainMenu(_isMonitoring);
 
                 var userInput = Console.ReadLine();
                 if (int.TryParse(userInput, out var option) && option > 0 && option <= MenuOptions.Count)
                 {
                     if (option == 11) // If the option is to toggle monitoring, update the status
                     {
-                        isMonitoring = !isMonitoring;
+                        _isMonitoring = !_isMonitoring;
                     }
                     ExecuteOption(option);
                 }
@@ -133,16 +133,16 @@ namespace RPTB
                     AskUserForDomain();
                     break;
                 case 11:
-                    if (isMonitoring)
+                    if (_isMonitoring)
                     {
                         ProcessMonitor.StopMonitoring();
-                        isMonitoring = false;
+                        _isMonitoring = false;
                         Console.WriteLine("Monitoring process stopped.");
                     }
                     else
                     {
                         ProcessMonitor.StartMonitoring();
-                        isMonitoring = true;
+                        _isMonitoring = true;
                         Console.WriteLine("Monitoring process started.");
                     }
                     break;

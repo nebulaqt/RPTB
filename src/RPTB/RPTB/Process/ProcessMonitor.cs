@@ -8,17 +8,17 @@ namespace RPTB.ProcUtilities
     {
         private static string _uniqueTitle = "RPTB - Caddy";
 
-        private static CancellationTokenSource? cancellationTokenSource;
+        private static CancellationTokenSource? _cancellationTokenSource;
 
         public static async Task StartMonitoring()
         {
-            cancellationTokenSource = new CancellationTokenSource();
-            await MonitorProcess(cancellationTokenSource.Token);
+            _cancellationTokenSource = new CancellationTokenSource();
+            await MonitorProcess(_cancellationTokenSource.Token);
         }
 
         public static void StopMonitoring()
         {
-            cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Cancel();
         }
 
         private static async Task MonitorProcess(CancellationToken cancellationToken)
