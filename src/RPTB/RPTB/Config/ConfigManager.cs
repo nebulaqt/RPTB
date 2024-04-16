@@ -131,8 +131,6 @@ public static class ConfigManager
             Console.WriteLine($"Error deleting static file server entry: {ex.Message}");
         }
     }
-
-
     private static void AddReverseProxyEntry()
     {
         try
