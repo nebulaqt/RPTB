@@ -2,7 +2,7 @@
 
 public static class ProcessMonitor
 {
-    private static readonly string _uniqueTitle = "RPTB - Caddy";
+    private const string UniqueTitle = "RPTB - Caddy";
 
     private static CancellationTokenSource? _cancellationTokenSource;
 
@@ -21,7 +21,7 @@ public static class ProcessMonitor
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (!IsProcessRunning(_uniqueTitle))
+            if (!IsProcessRunning(UniqueTitle))
             {
                 Console.WriteLine("Caddy process is not running. Starting it now.");
                 ProcessManager.StartCaddyProcess();
@@ -40,9 +40,6 @@ public static class ProcessMonitor
     private static bool IsProcessRunning(string uniqueTitle)
     {
         var processes = System.Diagnostics.Process.GetProcesses();
-        foreach (var process in processes)
-            if (ProcessManager.IsCaddyProcess(process))
-                return true;
-        return false;
+        return processes.Any(ProcessManager.IsCaddyProcess);
     }
 }
