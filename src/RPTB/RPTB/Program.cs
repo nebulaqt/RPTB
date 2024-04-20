@@ -31,6 +31,7 @@ internal static class Program
         "Restart Caddy Process",
         "Update Caddy",
         "Check Domain",
+        "Backup ProxyData",
         "Toggle Process Monitor",
         "Exit"
     };
@@ -129,6 +130,9 @@ internal static class Program
                 AskUserForDomain();
                 break;
             case 11:
+                ConfigBackup.BackupProxyDataFolder();
+                break;
+            case 12:
                 if (_isMonitoring)
                 {
                     ProcessMonitor.StopMonitoring();
@@ -137,13 +141,13 @@ internal static class Program
                 }
                 else
                 {
-                    ProcessMonitor.StartMonitoring();
+                    _ = ProcessMonitor.StartMonitoring();
                     _isMonitoring = true;
                     Console.WriteLine("Monitoring process started.");
                 }
 
                 break;
-            case 12:
+            case 13:
                 ExitProgram();
                 break;
             default:
